@@ -1,8 +1,6 @@
 package org.bajose1029;
 
-import java.util.Locale;
-import java.util.Random;
-import java.util.Scanner;
+import java.util.*;
 
 public class Terdle {
     private static final int WORD_LENGTH = 5;
@@ -11,14 +9,17 @@ public class Terdle {
     private static final int NO_MATCH = 0;
     private static final int EXACT_MATCH = 1;
     private static final int WRONG_LOCATION = 2;
-    private static final String[] words = {"chair", "crate", "train", "allow", "allow", "about", "study"};
+    private static final String[] words = new String[]{"chair", "crate", "train", "allow", "about", "study"};
 
+    private static final String COLOR_RESET = "\u001B[0m";
+    private static final String COLOR_BLACK = "\u001B[30m";
+    private static final String GREEN_BACKGROUND = "\u001B[42m";
+    private static final String YELLOW_BACKGROUND = "\u001B[43m";
+    private static final String GRAY_BACKGROUND = "\u001B[47m";
+
+    //Instance Variables
     private String word;
-    public static void main(String[] args) {
-        Terdle  terdleGame = new Terdle();
-        terdleGame.run();
-    }
-
+    private List<String> guesses = new ArrayList<>();
 
     public Terdle()
     {
@@ -27,6 +28,10 @@ public class Terdle {
         word = words[randomIndex];
     }
 
+    public static void main(String[] args) {
+        Terdle  terdleGame = new Terdle();
+        terdleGame.run();
+    }
 
     public void run()
     {
@@ -42,8 +47,9 @@ public class Terdle {
             String guess = scanner.nextLine();
             guess = guess.toLowerCase();
 
-            int [] results = checkGuess(guess);
-            printGuessResults(guess, results);
+            guesses.add(guess);
+
+            printGuesses();
 
             guessCount++;
 
@@ -59,11 +65,20 @@ public class Terdle {
         }
     }
 
+    private void printGuesses()
+    {
+        for(String guessToDisplay : guesses)
+        {
+            int[] results = checkGuess(guessToDisplay);
+            printGuessResults(guessToDisplay, results);
+        }
+    }
+
 
     private int[] checkGuess(String guess)
     {
         int [] resultCodes = new int[WORD_LENGTH];
-        String missedWordChars = "";
+        List<Character> missedWordChars = new ArrayList<>();
 
         for (int i = 0; i < WORD_LENGTH; i++)
         {
@@ -72,7 +87,7 @@ public class Terdle {
 
             if(wordChar != guessChar)
             {
-                missedWordChars += wordChar;
+                missedWordChars.add(wordChar);
             }
         }
         for (int i = 0; i < WORD_LENGTH; i++)
@@ -84,22 +99,52 @@ public class Terdle {
             {
                 resultCodes[i] = EXACT_MATCH;
             }
-            else if (missedWordChars.contains(Character.toString(guessChar)))
-            {
-                resultCodes[i] = WRONG_LOCATION;
-                missedWordChars = missedWordChars.replace(Character.toString(guessChar), "");
-            }
             else
             {
-                resultCodes[i] = NO_MATCH;
+                int index = missedWordChars.indexOf(guessChar);
+
+                if(index > -1)
+                {
+                    resultCodes[i] = WRONG_LOCATION;
+                    missedWordChars.remove(index);
+                }
+                else
+                {
+                    resultCodes[i] = NO_MATCH;
+                }
+
             }
         }
+
         return  resultCodes;
     }
 
     private void printGuessResults(String guess, int [] result)
     {
+        for (int i = 0; i < WORD_LENGTH; i++)
+        {
+            char ch = guess.charAt(i);
+            int resultCode = result[i];
+            String background = GRAY_BACKGROUND;
 
+            if(resultCode == EXACT_MATCH)
+            {
+                background = GREEN_BACKGROUND;
+            }
+            else if (resultCode == WRONG_LOCATION)
+            {
+                background = YELLOW_BACKGROUND;
+            }
+            printGuessChar(ch, background);
+        }
+        System.out.println();
     }
 
+    private void printGuessChar(char guessChar, String background)
+    {
+        String upperCaseGuessChar = Character.toString(guessChar).toUpperCase();
+        String formattedGuessChar =
+                String.format("%s%s %s %s", background, COLOR_BLACK, upperCaseGuessChar, COLOR_RESET);
+        System.out.print(formattedGuessChar);
+    }
 }
