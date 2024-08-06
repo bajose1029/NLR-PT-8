@@ -2,9 +2,10 @@ package org.bajose1029;
 
 import java.util.*;
 
+
+
 public class Terdle {
-    private static final int WORD_LENGTH = 5;
-    private  static final int MAX_GUESSES = 6;
+
 
     private static final String keyboard =
                     "QWERTYUIOP\n" +
@@ -17,25 +18,15 @@ public class Terdle {
     private static final String YELLOW_BACKGROUND = "\u001B[43m";
     private static final String GRAY_BACKGROUND = "\u001B[47m";
 
-    private static final int NO_MATCH = 0;
-    private static final int WRONG_LOCATION = 1;
-    private static final int EXACT_MATCH = 2;
+
 
     //Backgrounds
     private String[] backgrounds = new String[]{GRAY_BACKGROUND, YELLOW_BACKGROUND, GREEN_BACKGROUND};
 
-    //Game Words
-    private static final String[] words = new String[]{"chair", "crate", "train", "allow", "about", "study"};
 
     //Instance Variables
-    private String word;
-    private List<String> guesses = new ArrayList<>();
-
-    public Terdle()
-    {
-        Random random = new Random();
-        int randomIndex = random.nextInt(words.length);
-        word = words[randomIndex].toUpperCase();
+    private final Map<String, Player> players = new HashMap<>();
+    public Terdle() {
     }
 
     public static void main(String[] args) {
@@ -43,61 +34,105 @@ public class Terdle {
         terdleGame.run();
     }
 
-    public void run()
-    {
+    public void run() {
         System.out.println("Welcome to TErdle");
         Scanner scanner = new Scanner(System.in);
+        boolean run = true;
+        Player currentPlayer = null;
 
-        int guessCount = 1;
-        boolean win = false;
+        while (run) {
 
-        while(guessCount <= MAX_GUESSES && !win)
-        {
-            System.out.print("Please enter your guess # " + guessCount + ": ");
-            String guess = scanner.nextLine();
-            guess = guess.toUpperCase();
+            if(currentPlayer == null){
 
-            guesses.add(guess);
+                System.out.println("---------------------------------");
+                System.out.print("Enter player name: ");
+                String playerName = scanner.nextLine();
+                currentPlayer = players.get(playerName);
+                if(currentPlayer == null)
+                {
+                    currentPlayer = new Player(playerName);
+                    players.put(playerName, currentPlayer);
+                }
 
-            printGuesses();
+                System.out.println("Hello " + playerName + "!");
+            }
+            System.out.println("---------------------------------");
+            System.out.println("1) Play game.");
+            System.out.println("2) Change Player.");
+            System.out.println("3) Exit.");
+            System.out.println("Please enter your choice.");
 
-            guessCount++;
+            //todo Validate input (must be between 1 and 3 and an actual number must be typed in
+            int choice = Integer.parseInt(scanner.nextLine());
 
-            win = guess.equalsIgnoreCase(word);
 
-            if(!win)
+            if(choice == 1) {
+
+                System.out.println("---------------------------------");
+
+                Game currentGame = new Game();
+                int guessCount = 1;
+                boolean win = false;
+
+
+                while (guessCount <= Game.MAX_GUESSES && !win) {
+                    System.out.print("Please enter your guess # " + guessCount + ": ");
+                    String guess = scanner.nextLine();
+                    guess = guess.toUpperCase();
+
+                    currentGame.addGuess(guess);
+
+                    printGuesses(currentGame);
+
+                    guessCount++;
+
+                    win = guess.equalsIgnoreCase(currentGame.getWord());
+
+                    if (!win) {
+                        printKeyboard(currentGame);
+                    }
+                }
+                if (win) {
+                    System.out.println("Congrats you won!!");
+                    win = false;
+                } else {
+                    System.out.println("Sorry, you didn't win. The word is: " + currentGame.getWord() + ".");
+                }
+                currentPlayer.addGame(currentGame);
+                System.out.println("Player " + currentPlayer.getName() + ": " + currentPlayer.getWins() + " win, " +
+                        currentPlayer.getLosses() + " losses, average score " + currentPlayer.getAverageScore());
+            } else if (choice == 2) {
+                currentPlayer = null;
+            }
+            else if (choice == 3)
             {
-                printKeyboard();
+                System.out.println("Thanks for playing " + currentPlayer.getName() + "!");
+                run = false;
+            }
+            else {
+                System.out.println(choice + " is not a valid option.");
             }
         }
-        if (win)
-        {
-            System.out.println("Congrats you won!!");
-        }
-        else
-        {
-            System.out.println("Sorry, you didn't win. The word is: " + word + ".");
-        }
     }
-
-    private void printGuesses()
+    private void printGuesses(Game game)
     {
-        for(String guessToDisplay : guesses)
+        for(String guessToDisplay : game.getGuesses())
         {
-            int[] results = checkGuess(guessToDisplay);
+            int[] results = game.checkGuess(guessToDisplay);
             printGuessResults(guessToDisplay, results);
         }
         System.out.println();
     }
 
-    private void printKeyboard()
+    private void printKeyboard(Game game)
     {
-        Map<Character, Integer> resultMap = new HashMap<>();
-        for(String currentGuess : guesses)
+        Map<Character, Integer> resultMap = new HashMap<>(); //Integer is the value used to determine their color
+        // (0 = Gray, 1 = Yellow, 2 = Green)
+        for(String currentGuess : game.getGuesses())
         {
-            int[] results = checkGuess(currentGuess);
+            int[] results = game.checkGuess(currentGuess);
 
-            for(int i = 0; i < WORD_LENGTH; i++)
+            for(int i = 0; i < currentGuess.length(); i++)
             {
                 Character guessChar = currentGuess.charAt(i);
                 Integer resultCode = resultMap.get(guessChar);
@@ -116,54 +151,9 @@ public class Terdle {
         System.out.println();
     }
 
-
-    private int[] checkGuess(String guess)
-    {
-        int [] resultCodes = new int[WORD_LENGTH];
-        List<Character> missedWordChars = new ArrayList<>();
-
-        for (int i = 0; i < WORD_LENGTH; i++)
-        {
-            char wordChar = word.charAt(i);
-            char guessChar = guess.charAt(i);
-
-            if(wordChar != guessChar)
-            {
-                missedWordChars.add(wordChar);
-            }
-        }
-        for (int i = 0; i < WORD_LENGTH; i++)
-        {
-            char wordChar = word.charAt(i);
-            char guessChar = guess.charAt(i);
-
-            if (wordChar == guessChar)
-            {
-                resultCodes[i] = EXACT_MATCH;
-            }
-            else
-            {
-                int index = missedWordChars.indexOf(guessChar);
-
-                if(index > -1)
-                {
-                    resultCodes[i] = WRONG_LOCATION;
-                    missedWordChars.remove(index);
-                }
-                else
-                {
-                    resultCodes[i] = NO_MATCH;
-                }
-
-            }
-        }
-
-        return  resultCodes;
-    }
-
     private void printGuessResults(String guess, int [] result)
     {
-        for (int i = 0; i < WORD_LENGTH; i++)
+        for (int i = 0; i < guess.length(); i++)
         {
             char ch = guess.charAt(i);
             int resultCode = result[i];
